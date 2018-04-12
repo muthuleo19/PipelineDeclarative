@@ -1,15 +1,19 @@
 import com.cloudbees.groovy.cps.NonCPS
 
+environment
+  {
+		Workspace-Path = "C:\\Jenkins\\workspace"
+  }
 
 node('EDA-LA-01-edalab')
 {
-      stage('Build - Sync')
+      stage('Build - Sync Workspace')
       {
 	        try
           {
             timeout(time: 30, unit: 'DAYS')
             {
-              p4sync charset: 'none', credential: 'd1b38a63-ab5c-4bd0-a600-0886e0180394', populate: syncOnly(force: false, have: true, modtime: false, parallel: [enable: false, minbytes: '1024', minfiles: '1', threads: '4'], pin: '', quiet: true, revert: false), source: templateSource('wt-QuickLog')
+              p4sync charset: 'none', credential: 'd1b38a63-ab5c-4bd0-a600-0886e0180394', populate: syncOnly(force: false, have: true, modtime: false, parallel: [enable: false, minbytes: '1024', minfiles: '1', threads: '4'], pin: '', quiet: true, revert: false), source: templateSource('${Workspace}')
             }
             currentBuild.result = 'SUCCESS'
           }
@@ -20,16 +24,18 @@ node('EDA-LA-01-edalab')
           }
           finally
           {
-            echo 'build sync finished'
+            echo 'Workspace sync for the build is successful'
           }
 	      }
 
-        stage('Build - Devjob')
+        stage('Build - Devjob Execution')
 	      {
 	         try
            {
              timeout(time: 30, unit: 'DAYS')
              {
+               bat 'C:\\Batch\\build2\\labview-cli --kill --lv-ver 2014 "C:\\Batch\\build2\\Build VIPB Spec.vi" -- "%Workspace-Path%\\QuickLog\\.vipb" %DEV% %BUILD_NUMBER% "False" "Packages\\LabAutomation\\Teststand\\Custom Steps\\Datalogging" "Configuration_Files\\LabAutomation\\Teststand\\Datalogging" "TestStand" "NA" " "'
+				       archiveArtifacts '*.vip,QuickLog/QuickLog.html'
              }
              currentBuild.result = 'SUCCESS'
            }
@@ -44,7 +50,7 @@ node('EDA-LA-01-edalab')
           }
 	      }
 
-         stage('Build - Deploy')
+         stage('Build - Deployment to DM41')
 	       {
 	          try
             {
@@ -60,12 +66,12 @@ node('EDA-LA-01-edalab')
             }
             finally
             {
-              echo 'Deploy to Build DM41 finished'
+              echo 'Deployment of build package to DM41 server is successful'
             }
 	         }
 
 
-           stage('Build - Master XML')
+           stage('Build - Master XML - DM41')
 	         {
 	            try
               {
@@ -81,12 +87,12 @@ node('EDA-LA-01-edalab')
               }
               finally
               {
-                echo 'Master xml file creation completed'
+                echo 'Master xml file creation in DM41 is completed'
               }
 	          }
 
 
-	         stage('Test - Static')
+	         stage('DM41 Test - VIA')
 	         {
           	  try
               {
@@ -102,12 +108,12 @@ node('EDA-LA-01-edalab')
               }
               finally
               {
-                echo 'VIA Test Execution finished'
+                echo 'VIA Test Execution in DM41 is finished'
               }
 	          }
 
 
-            stage('Test - Dynamic Test')
+            stage('DM41 Test - UTF')
 	          {
           	  try
               {
@@ -123,7 +129,7 @@ node('EDA-LA-01-edalab')
               }
               finally
               {
-                echo 'UTF based dynamic test execution finished'
+                echo 'UTF based dynamic test execution in DM41 is finished'
               }
         	  }
 
@@ -149,7 +155,7 @@ node('EDA-LA-01-edalab')
           	}
 
 
-            stage('Release - Deploy DM44')
+            stage('Release - Deployment to DM44')
           	{
           	  try
               {
@@ -165,12 +171,12 @@ node('EDA-LA-01-edalab')
               }
               finally
               {
-                echo 'Deployment to DM44 is finished...'
+                echo 'Deployment of Package to DM44 is finished...'
               }
           	}
 
 
-          	stage('Release - Master XML')
+          	stage('Release - Master XML - DM44')
           	{
           	  try
               {
@@ -186,12 +192,12 @@ node('EDA-LA-01-edalab')
               }
               finally
               {
-                echo 'Generate master xml in DM44 is finished..'
+                echo 'Master xml generation in DM44 is finished..'
               }
           	}
 
 
-            stage('DM44 Test')
+            stage('DM44 Test - Integration')
           	{
           	  try
               {
